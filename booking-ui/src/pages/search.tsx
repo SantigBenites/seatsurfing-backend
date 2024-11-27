@@ -35,6 +35,7 @@ interface State {
   errorText: string
   loading: boolean
   listView: boolean
+  weeklyReservation: boolean
   prefEnterTime: number
   prefWorkdayStart: number
   prefWorkdayEnd: number
@@ -91,6 +92,7 @@ class Search extends React.Component<Props, State> {
       errorText: "",
       loading: true,
       listView: false,
+      weeklyReservation: false,
       prefEnterTime: 0,
       prefWorkdayStart: 0,
       prefWorkdayEnd: 0,
@@ -666,6 +668,12 @@ class Search extends React.Component<Props, State> {
     });
   }
 
+  toggleWeeklyReservation = () => {
+    this.setState({weeklyReservation: !this.state.weeklyReservation}, () => {
+        console.log("State changed for weekly reservation")
+    })
+  }
+
   render() {
     let hint = <></>;
     if ((!this.state.canSearch) && (this.state.canSearchHint)) {
@@ -764,6 +772,12 @@ class Search extends React.Component<Props, State> {
               </div>
             </Form.Group>
             {hint}
+            <Form.Group className="d-flex margin-top-10">
+              <div className='me-2'><MapIcon title={this.props.t("notification")} color={'#555'} height="20px"  width="20px" /></div>
+              <div className='ms-2 w-100'>
+                <Form.Check type="switch" checked={!this.state.weeklyReservation} onChange={() => this.toggleWeeklyReservation()} label={this.state.weeklyReservation ? this.props.t("weeklyReservation") : this.props.t("weeklyReservation")} />
+              </div>
+            </Form.Group>
             <Form.Group className="d-flex margin-top-10">
               <div className='me-2'><WeekIcon title={this.props.t("week")} color={'#555'} height="20px" width="20px" /></div>
               <div className='ms-2 w-100'>
