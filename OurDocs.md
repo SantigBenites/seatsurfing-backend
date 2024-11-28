@@ -200,12 +200,12 @@ func (router *BookingRouter) create(w http.ResponseWriter, r *http.Request) {
 Step by step
 
 First step:
- - Make a button that allows us to choose between weekly reservations or not
+ - <del> Make a button that allows us to choose between weekly reservations or not </del>
 
 Only doing in case button is true
 
 Second step
- - Appear a new date box similar to the one that already exist in main page (http://di-seatsurfing.di.fc.ul.pt:8080/ui/search) <img src="data_image.png" alt="drawing" width="250"/>
+ - <del> Appear a new date box similar to the one that already exist in main page (http://di-seatsurfing.di.fc.ul.pt:8080/ui/search) <img src="data_image.png" alt="drawing" width="250"/> </del>
 
 Third step
  - Calculate all the dates that the room will be booked and store them in an array

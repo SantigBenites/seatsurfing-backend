@@ -9,7 +9,7 @@ import 'react-date-picker/dist/DatePicker.css';
 import 'react-calendar/dist/Calendar.css';
 import 'react-clock/dist/Clock.css';
 import Loading from '../components/Loading';
-import { EnterOutline as EnterIcon, ExitOutline as ExitIcon, LocationOutline as LocationIcon, ChevronUpOutline as CollapseIcon, ChevronDownOutline as CollapseIcon2, SettingsOutline as SettingsIcon, MapOutline as MapIcon, CalendarOutline as WeekIcon } from 'react-ionicons'
+import { EnterOutline as EnterIcon, ExitOutline as ExitIcon, LocationOutline as LocationIcon, ChevronUpOutline as CollapseIcon, ChevronDownOutline as CollapseIcon2, SettingsOutline as SettingsIcon, MapOutline as MapIcon, CalendarOutline as WeekIcon, NotificationsOutline as NotificationIcon } from 'react-ionicons'
 import ErrorText from '../types/ErrorText';
 import { NextRouter } from 'next/router';
 import { WithTranslation, withTranslation } from 'next-i18next';
@@ -22,6 +22,7 @@ interface State {
   earliestEnterDate: Date;
   enter: Date
   leave: Date
+  until: Date
   daySlider: number
   daySliderDisabled: boolean
   locationId: string
@@ -52,6 +53,15 @@ interface Props extends WithTranslation {
   router: NextRouter
 }
 
+class ExtendedBooking extends Booking {
+  dateUntil: Date;
+
+  constructor() {
+    super();
+    this.dateUntil = new Date(); // Add your new attribute here
+  }
+}
+
 class Search extends React.Component<Props, State> {
   static PreferenceEnterTimeNow: number = 1;
   static PreferenceEnterTimeNextDay: number = 2;
@@ -64,6 +74,7 @@ class Search extends React.Component<Props, State> {
   searchContainerRef: RefObject<any>;
   enterChangeTimer: number | undefined;
   leaveChangeTimer: number | undefined;
+  untilChangeTimer: number | undefined;
   buddies: Buddy[];
 
   constructor(props: any) {
@@ -75,10 +86,12 @@ class Search extends React.Component<Props, State> {
     this.searchContainerRef = React.createRef();
     this.enterChangeTimer = undefined;
     this.leaveChangeTimer = undefined;
+    this.untilChangeTimer = undefined;
     this.state = {
       earliestEnterDate: new Date(),
       enter: new Date(),
       leave: new Date(),
+      until: new Date(),
       locationId: "",
       daySlider: 0,
       daySliderDisabled: false,
@@ -92,7 +105,7 @@ class Search extends React.Component<Props, State> {
       errorText: "",
       loading: true,
       listView: false,
-      weeklyReservation: false,
+      weeklyReservation: true,
       prefEnterTime: 0,
       prefWorkdayStart: 0,
       prefWorkdayEnd: 0,
@@ -431,6 +444,23 @@ class Search extends React.Component<Props, State> {
     }
   }
 
+  setUntilDate = (value: Date | [Date | null, Date | null]) => {
+    console.log(value)
+    let performChange = () => {
+      let date = (value instanceof Date) ? value : value[0];
+      if (date == null) {
+        return;
+      }
+      this.setState({
+        until: date
+      });
+    };
+    if (typeof window !== 'undefined') {
+      window.clearTimeout(this.untilChangeTimer);
+      this.untilChangeTimer = window.setTimeout(performChange, 1000);
+    }
+  }
+
   changeLocation = (id: string) => {
     this.setState({
       locationId: id,
@@ -588,14 +618,21 @@ class Search extends React.Component<Props, State> {
       showConfirm: false,
       loading: true
     });
+    let extendedBooking: ExtendedBooking = new ExtendedBooking();
     let booking: Booking = new Booking();
     booking.enter = new Date(this.state.enter);
+    extendedBooking.enter = new Date(this.state.enter)
     booking.leave = new Date(this.state.leave);
+    extendedBooking.leave = new Date(this.state.leave);
+    extendedBooking.dateUntil = new Date(this.state.until);
     if (!RuntimeConfig.INFOS.dailyBasisBooking) {
       booking.leave.setSeconds(booking.leave.getSeconds() - 1);
     }
     booking.space = this.state.selectedSpace;
-    booking.save().then(() => {
+    extendedBooking.space = this.state.selectedSpace;
+    console.log(extendedBooking)
+    console.log(booking)
+    extendedBooking.save().then(() => {
       this.setState({
         loading: false,
         showSuccess: true
@@ -694,6 +731,10 @@ class Search extends React.Component<Props, State> {
     if (RuntimeConfig.INFOS.dailyBasisBooking) {
       leaveDatePicker = <DatePicker value={this.state.leave} onChange={(value: Date | null | [Date | null, Date | null]) => { if (value != null) this.setLeaveDate(value) }} clearIcon={null} required={true} format={this.props.t("datePickerFormatDailyBasisBooking")} />;
     }
+    let untilDatePicker = <DatePicker value={this.state.until} onChange={(value) => { if (value != null) this.setUntilDate(value) }} clearIcon={null} required={true} format={this.props.t("datePickerFormatDailyBasisBooking")} />;
+    if (RuntimeConfig.INFOS.dailyBasisBooking) {
+      untilDatePicker = <DatePicker value={this.state.until} onChange={(value) => { if (value != null) this.setUntilDate(value) }} clearIcon={null} required={true} format={this.props.t("datePickerFormatDailyBasisBooking")} />;
+    }
 
     let listOrMap = <></>;
     if (this.state.listView) {
@@ -773,11 +814,19 @@ class Search extends React.Component<Props, State> {
             </Form.Group>
             {hint}
             <Form.Group className="d-flex margin-top-10">
-              <div className='me-2'><MapIcon title={this.props.t("notification")} color={'#555'} height="20px"  width="20px" /></div>
+              <div className='me-2'><NotificationIcon title={this.props.t("notification")} color={'#555'} height="20px"  width="20px" /></div>
               <div className='ms-2 w-100'>
                 <Form.Check type="switch" checked={!this.state.weeklyReservation} onChange={() => this.toggleWeeklyReservation()} label={this.state.weeklyReservation ? this.props.t("weeklyReservation") : this.props.t("weeklyReservation")} />
               </div>
             </Form.Group>
+            {!this.state.weeklyReservation && (
+              <Form.Group className="d-flex margin-top-10">
+                <div className='pt-1 me-2'><ExitIcon title={this.props.t("until")} color={'#555'} height="20px" width="20px" /></div>
+                <div className='ms-2 w-100'>
+                  {untilDatePicker}
+                </div>
+              </Form.Group>
+            )}
             <Form.Group className="d-flex margin-top-10">
               <div className='me-2'><WeekIcon title={this.props.t("week")} color={'#555'} height="20px" width="20px" /></div>
               <div className='ms-2 w-100'>
@@ -807,8 +856,11 @@ class Search extends React.Component<Props, State> {
         <Modal.Body>
           <p>{this.props.t("space")}: {this.state.selectedSpace?.name}</p>
           <p>{this.props.t("area")}: {this.getLocationName()}</p>
-          <p>{this.props.t("enter")}: {formatter.format(Formatting.convertToFakeUTCDate(new Date(this.state.enter)))}</p>
-          <p>{this.props.t("leave")}: {formatter.format(Formatting.convertToFakeUTCDate(new Date(this.state.leave)))}</p>
+          <p>{this.props.t("enter")}: {new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(Formatting.convertToFakeUTCDate(new Date(this.state.enter)))}</p>
+          <p>{this.props.t("leave")}: {new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(Formatting.convertToFakeUTCDate(new Date(this.state.leave)))}</p>
+          {!this.state.weeklyReservation && (
+            <p>{this.props.t("weeklyReservation")}: {new Intl.DateTimeFormat('en-GB', {day: '2-digit',month: '2-digit',year: 'numeric',}).format(new Date(this.state.until))}</p>
+          )}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => this.setState({ showConfirm: false })}>
