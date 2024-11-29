@@ -60,6 +60,15 @@ class ExtendedBooking extends Booking {
     super();
     this.dateUntil = new Date(); // Add your new attribute here
   }
+
+  serialize() {
+    // Call the parent serialize method and add dateUntil to the serialized object
+    let base = super.serialize();
+    return {
+      ...base,
+      dateUntil: this.dateUntil ? this.dateUntil.toISOString() : null,
+    };
+  }
 }
 
 class Search extends React.Component<Props, State> {
@@ -619,19 +628,12 @@ class Search extends React.Component<Props, State> {
       loading: true
     });
     let extendedBooking: ExtendedBooking = new ExtendedBooking();
-    let booking: Booking = new Booking();
-    booking.enter = new Date(this.state.enter);
     extendedBooking.enter = new Date(this.state.enter)
-    booking.leave = new Date(this.state.leave);
     extendedBooking.leave = new Date(this.state.leave);
     extendedBooking.dateUntil = new Date(this.state.until);
-    if (!RuntimeConfig.INFOS.dailyBasisBooking) {
-      booking.leave.setSeconds(booking.leave.getSeconds() - 1);
-    }
-    booking.space = this.state.selectedSpace;
     extendedBooking.space = this.state.selectedSpace;
     console.log(extendedBooking)
-    console.log(booking)
+    console.log("Serialized payload:", extendedBooking.serialize());
     extendedBooking.save().then(() => {
       this.setState({
         loading: false,

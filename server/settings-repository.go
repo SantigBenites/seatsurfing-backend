@@ -197,14 +197,14 @@ func (r *SettingsRepository) InitDefaultSettingsForOrg(organizationID string) er
 		"($1, '"+SettingDisableBuddies.Name+"', '0'), "+
 		"($1, '"+SettingConfluenceServerSharedSecret.Name+"', ''), "+
 		"($1, '"+SettingConfluenceAnonymous.Name+"', '0'), "+
-		"($1, '"+SettingMaxBookingsPerUser.Name+"', '10'), "+
+		"($1, '"+SettingMaxBookingsPerUser.Name+"', '0'), "+
 		"($1, '"+SettingMaxConcurrentBookingsPerUser.Name+"', '0'), "+
 		"($1, '"+SettingEnableMaxHourBeforeDelete.Name+"', '0'), "+
 		"($1, '"+SettingMaxHoursBeforeDelete.Name+"', '0'), "+
 		"($1, '"+SettingMaxHoursPartiallyBookedEnabled.Name+"', '0'), "+
 		"($1, '"+SettingMaxHoursPartiallyBooked.Name+"', '8'), "+
 		"($1, '"+SettingMinBookingDurationHours.Name+"', '0'), "+
-		"($1, '"+SettingMaxDaysInAdvance.Name+"', '14'), "+
+		"($1, '"+SettingMaxDaysInAdvance.Name+"', '360'), "+
 		"($1, '"+SettingMaxBookingDurationHours.Name+"', '12'), "+
 		"($1, '"+SettingDefaultTimezone.Name+"', 'Europe/Berlin') "+
 		"ON CONFLICT (organization_id, name) DO NOTHING",

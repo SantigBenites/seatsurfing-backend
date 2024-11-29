@@ -208,7 +208,7 @@ Second step
  - <del> Appear a new date box similar to the one that already exist in main page (http://di-seatsurfing.di.fc.ul.pt:8080/ui/search) <img src="data_image.png" alt="drawing" width="250"/> </del>
 
 Third step
- - Calculate all the dates that the room will be booked and store them in an array
+ - <del> Calculate all the dates that the room will be booked and store them in an array </del>
 
 Fourth step
- - Change onConfirmBooking to make the exactly same but for each of the dates on the array
+ - <del> Change onConfirmBooking to make the exactly same but for each of the dates on the array </del>

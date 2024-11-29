@@ -26,7 +26,7 @@ export default class RuntimeConfig {
         isLoading: true,
         maxBookingsPerUser: 0,
         maxConcurrentBookingsPerUser: 0,
-        maxDaysInAdvance: 0,
+        maxDaysInAdvance: 360,
         maxBookingDurationHours: 0,
         maxHoursBeforeDelete: 0,
         minBookingDurationHours: 0,
@@ -75,7 +75,7 @@ export default class RuntimeConfig {
                     if (typeof window !== 'undefined') {
                         if (s.name === "max_bookings_per_user") RuntimeConfig.INFOS.maxBookingsPerUser = window.parseInt(s.value);
                         if (s.name === "max_concurrent_bookings_per_user") RuntimeConfig.INFOS.maxConcurrentBookingsPerUser = window.parseInt(s.value);
-                        if (s.name === "max_days_in_advance") RuntimeConfig.INFOS.maxDaysInAdvance = window.parseInt(s.value);
+                        if (s.name === "max_days_in_advance") RuntimeConfig.INFOS.maxDaysInAdvance = 360;
                         if (s.name === "max_booking_duration_hours") RuntimeConfig.INFOS.maxBookingDurationHours = window.parseInt(s.value);
                         if (s.name === "max_hours_before_delete") RuntimeConfig.INFOS.maxHoursBeforeDelete = window.parseInt(s.value);
                         if (s.name === "max_hours_partially_booked") RuntimeConfig.INFOS.maxHoursPartiallyBooked = window.parseInt(s.value);

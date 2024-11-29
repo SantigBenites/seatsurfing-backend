@@ -23,6 +23,7 @@ type BookingRequest struct {
 type CreateBookingRequest struct {
 	SpaceID string `json:"spaceId" validate:"required"`
 	BookingRequest
+	DateUntil *time.Time `json:"dateUntil"`
 }
 
 type PreCreateBookingRequest struct {
@@ -383,31 +384,47 @@ func (router *BookingRouter) create(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	bookingReq := &BookingRequest{
-		Enter: e.Enter,
-		Leave: e.Leave,
+	var reservations []BookingRequest
+	current := e.Enter
+
+	for current.Before(*m.DateUntil) || current.Equal(*m.DateUntil) {
+		reservations = append(reservations, BookingRequest {
+			Enter: current,
+			Leave: time.Date(current.Year(), current.Month(), current.Day(), e.Leave.Hour(), e.Leave.Minute(), e.Leave.Second(), e.Leave.Nanosecond(), e.Leave.Location()),
+		})
+		current = current.AddDate(0, 0, 7)
 	}
 
-	if valid, code := router.checkBookingCreateUpdate(bookingReq, location, requestUser, ""); !valid {
-		log.Println(err)
-		SendBadRequestCode(w, code)
-		return
+	for _, bookingReq := range reservations {
+		booking := Booking{
+			UserID: e.UserID,
+			Enter: bookingReq.Enter,
+			Leave: bookingReq.Leave,
+			SpaceID: e.SpaceID
+		}
+	
+		if valid, code := router.checkBookingCreateUpdate(&bookingReq, location, requestUser, ""); !valid {
+			log.Println(err)
+			SendBadRequestCode(w, code)
+			return
+		}
+		conflicts, err := GetBookingRepository().GetConflicts(e.SpaceID, booking.Enter, booking.Leave, "")
+		if err != nil {
+			log.Println(err)
+			SendInternalServerError(w)
+			return
+		}
+		if len(conflicts) > 0 {
+			SendAleadyExists(w)
+			return
+		}
+		if err := GetBookingRepository().Create(&booking); err != nil {
+			log.Println(err)
+			SendInternalServerError(w)
+			return
+		}
 	}
-	conflicts, err := GetBookingRepository().GetConflicts(e.SpaceID, e.Enter, e.Leave, "")
-	if err != nil {
-		log.Println(err)
-		SendInternalServerError(w)
-		return
-	}
-	if len(conflicts) > 0 {
-		SendAleadyExists(w)
-		return
-	}
-	if err := GetBookingRepository().Create(e); err != nil {
-		log.Println(err)
-		SendInternalServerError(w)
-		return
-	}
+	
 	SendCreated(w, e.ID)
 }
 
@@ -554,6 +571,7 @@ func (router *BookingRouter) getHoursOnDate(t *time.Time) int {
 func (router *BookingRouter) isValidBookingAdvance(m *BookingRequest, orgID string, user *User) bool {
 	noAdminRestrictions, _ := GetSettingsRepository().GetBool(orgID, SettingNoAdminRestrictions.Name)
 	maxAdvanceDays, _ := GetSettingsRepository().GetInt(orgID, SettingMaxDaysInAdvance.Name)
+	maxAdvanceDays = 360
 	dailyBasisBooking, _ := GetSettingsRepository().GetBool(orgID, SettingDailyBasisBooking.Name)
 	// allow Enter-Date in past if at least this morning
 	now := time.Now().UTC()
