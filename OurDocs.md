@@ -212,3 +212,7 @@ Third step
 
 Fourth step
  - <del> Change onConfirmBooking to make the exactly same but for each of the dates on the array </del>
+
+# TODO
+
+Fix the way the maximum number of days in advance was done, it is static and fixed in file: booking-ui/src/components/RuntimeConfig.ts line 78: if (s.name === "max_days_in_advance") RuntimeConfig.INFOS.maxDaysInAdvance = 360; and in server booking-router.go line 574: maxAdvanceDays = 360
