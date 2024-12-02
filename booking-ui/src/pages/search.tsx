@@ -54,7 +54,7 @@ interface Props extends WithTranslation {
 }
 
 class ExtendedBooking extends Booking {
-  dateUntil: Date;
+  dateUntil: Date | null;
 
   constructor() {
     super();
@@ -630,7 +630,8 @@ class Search extends React.Component<Props, State> {
     let extendedBooking: ExtendedBooking = new ExtendedBooking();
     extendedBooking.enter = new Date(this.state.enter)
     extendedBooking.leave = new Date(this.state.leave);
-    extendedBooking.dateUntil = new Date(this.state.until);
+    this.state.until.setHours(23, 59, 59);
+    extendedBooking.dateUntil = !this.state.weeklyReservation ? new Date(this.state.until) : null;
     extendedBooking.space = this.state.selectedSpace;
     console.log(extendedBooking)
     console.log("Serialized payload:", extendedBooking.serialize());
