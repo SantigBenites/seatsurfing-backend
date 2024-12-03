@@ -133,3 +133,30 @@ h2 {
     background-color: #fff;
     box-shadow: none;
 }
+
+
+.horizontal-scroll-container {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 10px;
+    gap: 20px;
+  }
+  
+  .date-group {
+    flex: 0 0 auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+  }
+  
+  .date-group h4 {
+    margin-bottom: 10px;
+  }
+  
+  .date-group .list-group {
+    display: flex;
+    gap: 10px;
+  }
+  

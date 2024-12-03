@@ -87,6 +87,31 @@ class Bookings extends React.Component<Props, State> {
     );
   }
 
+  groupBookingsByDate(bookings: Booking[]): Record<string, Booking[]> {
+    return bookings.reduce((groups: Record<string, Booking[]>, booking: Booking) => {
+      const date = new Date(booking.enter).toLocaleDateString();
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(booking);
+      return groups;
+    }, {});
+  }
+  
+  
+
+  groupBookingsByMonth(bookings: Booking[]): Record<string, Booking[]> {
+    return bookings.reduce((groups: Record<string, Booking[]>, booking: Booking) => {
+      const date = new Date(booking.enter);
+      const monthYear = `${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`;
+      if (!groups[monthYear]) {
+        groups[monthYear] = [];
+      }
+      groups[monthYear].push(booking);
+      return groups;
+    }, {});
+  }
+  
   render() {
     if (this.state.loading) {
       return <Loading />;
@@ -97,38 +122,60 @@ class Bookings extends React.Component<Props, State> {
           <NavBar />
           <div className="container-signin">
             <Form className="form-signin">
-              <p>{this.props.t("noBookings")}</p>
+              <p>{this.props.t("noBookings123")}</p>
             </Form>
           </div>
         </>
       );
     }
-    let formatter = Formatting.getFormatter();
-    if (RuntimeConfig.INFOS.dailyBasisBooking) {
-      formatter = Formatting.getFormatterNoTime();
-    }
+  
+    const groupedBookings = this.groupBookingsByMonth(this.data);
+  
     return (
       <>
         <NavBar />
         <div className="container-signin">
-          <Form className="form-signin">
-            <ListGroup>
-              {this.data.map(item => this.renderItem(item))}
-            </ListGroup>
+          <Form className="form-signin" style={{ width: "100%" }}>
+            <div className="monthly-bookings-container">
+              {Object.entries(groupedBookings).map(([month, bookings]) => (
+                <div key={month} className="month-group">
+                  <h4>{month}</h4>
+                  <ListGroup horizontal>
+                    {bookings.map((item) => this.renderItem(item))}
+                  </ListGroup>
+                </div>
+              ))}
+            </div>
           </Form>
         </div>
-        <Modal show={this.state.selectedItem != null} onHide={() => this.setState({ selectedItem: null })}>
+        <Modal
+          show={this.state.selectedItem != null}
+          onHide={() => this.setState({ selectedItem: null })}
+        >
           <Modal.Header closeButton>
             <Modal.Title>{this.props.t("cancelBooking")}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <p>{this.props.t("confirmCancelBooking", { enter: formatter.format(this.state.selectedItem?.enter), interpolation: { escapeValue: false } })}</p>
+            <p>
+              {this.props.t("confirmCancelBooking", {
+                enter: new Intl.DateTimeFormat('default', {
+                  dateStyle: 'full',
+                  timeStyle: 'short',
+                }).format(this.state.selectedItem?.enter),
+              })}
+            </p>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={() => this.setState({ selectedItem: null })}>
+            <Button
+              variant="secondary"
+              onClick={() => this.setState({ selectedItem: null })}
+            >
               {this.props.t("back")}
             </Button>
-            <Button variant="danger" onClick={() => this.cancelBooking(this.state.selectedItem)}>
+            <Button
+              variant="danger"
+              onClick={() => this.cancelBooking(this.state.selectedItem)}
+            >
               {this.props.t("cancelBooking")}
             </Button>
           </Modal.Footer>
@@ -136,6 +183,9 @@ class Bookings extends React.Component<Props, State> {
       </>
     );
   }
+  
+  
+
 }
 
 export default withTranslation()(withReadyRouter(Bookings as any));
