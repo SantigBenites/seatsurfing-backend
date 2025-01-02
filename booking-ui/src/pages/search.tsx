@@ -1,6 +1,6 @@
 import React, { RefObject } from 'react';
-import { Form, Col, Row, Modal, Button, ListGroup, Badge } from 'react-bootstrap';
-import { Location, Booking, Buddy, User, Ajax, Formatting, Space, AjaxError, UserPreference } from 'flexspace-commons';
+import { Form, Col, Row, Modal, Button, ListGroup, Badge, InputGroup } from 'react-bootstrap';
+import { Location, Booking, Buddy, User, Ajax, Formatting, Space, AjaxError, UserPreference, SpaceAttributeValue, SpaceAttribute, SearchAttribute } from 'flexspace-commons';
 // @ts-ignore
 import DateTimePicker from 'react-datetime-picker';
 import DatePicker from 'react-date-picker';
@@ -10,6 +10,7 @@ import 'react-calendar/dist/Calendar.css';
 import 'react-clock/dist/Clock.css';
 import Loading from '../components/Loading';
 import { EnterOutline as EnterIcon, ExitOutline as ExitIcon, LocationOutline as LocationIcon, ChevronUpOutline as CollapseIcon, ChevronDownOutline as CollapseIcon2, SettingsOutline as SettingsIcon, MapOutline as MapIcon, CalendarOutline as WeekIcon, NotificationsOutline as NotificationIcon } from 'react-ionicons'
+import { IoFilter as FilterIcon, IoInformation as InfoIcon, IoEnter as EnterIcon, IoExit as ExitIcon, IoLocation as LocationIcon, IoChevronUp as CollapseIcon, IoChevronDown as CollapseIcon2, IoSettings as SettingsIcon, IoMap as MapIcon, IoCalendar as WeekIcon } from 'react-icons/io5'
 import ErrorText from '../types/ErrorText';
 import { NextRouter } from 'next/router';
 import { WithTranslation, withTranslation } from 'next-i18next';
@@ -31,6 +32,8 @@ interface State {
   showBookingNames: boolean
   selectedSpace: Space | null
   showConfirm: boolean
+  showLocationDetails: boolean
+  showSearchModal: boolean
   showSuccess: boolean
   showError: boolean
   errorText: string
@@ -47,6 +50,8 @@ interface State {
   prefSelfBookedColor: string
   prefPartiallyBookedColor: string
   prefBuddyBookedColor: string
+  attributeValues: SpaceAttributeValue[]
+  searchAttributes: SearchAttribute[]
 }
 
 interface Props extends WithTranslation {
@@ -85,6 +90,7 @@ class Search extends React.Component<Props, State> {
   leaveChangeTimer: number | undefined;
   untilChangeTimer: number | undefined;
   buddies: Buddy[];
+  availableAttributes: SpaceAttribute[];
 
   constructor(props: any) {
     super(props);
@@ -92,6 +98,7 @@ class Search extends React.Component<Props, State> {
     this.locations = [];
     this.mapData = null;
     this.buddies = [];
+    this.availableAttributes = [];
     this.searchContainerRef = React.createRef();
     this.enterChangeTimer = undefined;
     this.leaveChangeTimer = undefined;
@@ -109,6 +116,8 @@ class Search extends React.Component<Props, State> {
       showBookingNames: false,
       selectedSpace: null,
       showConfirm: false,
+      showLocationDetails: false,
+      showSearchModal: false,
       showSuccess: false,
       showError: false,
       errorText: "",
@@ -125,13 +134,15 @@ class Search extends React.Component<Props, State> {
       prefSelfBookedColor: "#b825de",
       prefPartiallyBookedColor: "#ff9100",
       prefBuddyBookedColor: "#2415c5",
+      attributeValues: [],
+      searchAttributes: [],
     };
   }
 
   componentDidMount = () => {
     console.log(RuntimeConfig.INFOS);
     if (!Ajax.CREDENTIALS.accessToken) {
-      this.props.router.push({pathname: "/login", query: { redir: this.props.router.asPath }});
+      this.props.router.push({ pathname: "/login", query: { redir: this.props.router.asPath } });
       return;
     }
     this.loadItems();
@@ -142,26 +153,25 @@ class Search extends React.Component<Props, State> {
       this.loadLocations(),
       this.loadPreferences(),
       this.loadBuddies(),
+      this.loadAvailableAttributes(),
     ];
     Promise.all(promises).then(() => {
       this.initDates();
       if (this.state.locationId === "" && this.locations.length > 0) {
-        let defaultLocationId = this.locations[0].id;
-        if (this.state.prefLocationId) {
-          defaultLocationId = this.locations.find((e) => e.id === this.state.prefLocationId)?.id || defaultLocationId;
-        }
-        let lidParam = this.props.router.query["lid"] as string || "";
-        if (lidParam) {
-          defaultLocationId = this.locations.find((e) => e.id === lidParam)?.id || defaultLocationId;
-        }
+        let defaultLocationId = this.getPreferredLocationId(this.props.router.query["lid"] as string || '');
         let sidParam = this.props.router.query["sid"] as string || "";
         this.setState({ locationId: defaultLocationId }, () => {
-          this.loadMap(this.state.locationId).then(() => {
-            this.setState({ loading: false });
-            if (sidParam) {
-              let space = this.data.find( (item) => item.id == sidParam);
-              if (space) this.onSpaceSelect(space);
-            }
+          this.getLocation()?.getAttributes().then((attributes) => {
+            this.loadMap(this.state.locationId).then(() => {
+              this.setState({
+                attributeValues: attributes,
+                loading: false
+              });
+              if (sidParam) {
+                let space = this.data.find((item) => item.id == sidParam);
+                if (space) this.onSpaceSelect(space);
+              }
+            });
           });
         });
       } else {
@@ -205,6 +215,23 @@ class Search extends React.Component<Props, State> {
       this.curBookingCount = list.length;
       this.updateCanSearch();
     });
+  }
+
+  getPreferredLocationId = (previousLocationId?: string) => {
+    if (previousLocationId !== undefined) {
+      if (this.locations.find((e) => (e.id === previousLocationId) && e.enabled) !== undefined) {
+        return previousLocationId
+      }
+    }
+    if (this.state.prefLocationId && this.locations.find((e) => (e.id === this.state.prefLocationId) && e.enabled) !== undefined) {
+      return this.state.prefLocationId;
+    }
+    for (let location of this.locations) {
+      if (location.enabled) {
+        return location.id;
+      }
+    }
+    return '';
   }
 
   initDates = () => {
@@ -259,6 +286,12 @@ class Search extends React.Component<Props, State> {
   loadLocations = async (): Promise<void> => {
     return Location.list().then(list => {
       this.locations = list;
+    });
+  }
+
+  loadAvailableAttributes = async (): Promise<void> => {
+    return SpaceAttribute.list().then(attributes => {
+      this.availableAttributes = attributes;
     });
   }
 
@@ -359,7 +392,7 @@ class Search extends React.Component<Props, State> {
 
   renderLocations = () => {
     return this.locations.map(location => {
-      return <option value={location.id} key={location.id}>{location.name}</option>;
+      return <option value={location.id} key={location.id} disabled={!location.enabled}>{location.name}</option>;
     });
   }
 
@@ -474,9 +507,15 @@ class Search extends React.Component<Props, State> {
     this.setState({
       locationId: id,
       loading: true,
-    });
-    this.loadMap(id).then(() => {
-      this.setState({ loading: false });
+    }, () => {
+      this.getLocation()?.getAttributes().then((attributes) => {
+        this.loadMap(id).then(() => {
+          this.setState({
+            attributeValues: attributes,
+            loading: false
+          });
+        });
+      });
     });
   }
 
@@ -680,13 +719,16 @@ class Search extends React.Component<Props, State> {
     });
   }
 
+  getLocation = (): Location | undefined => {
+    return this.locations.find(e => e.id === this.state.locationId);
+  }
+
   getLocationName = (): string => {
     let name: string = this.props.t("none");
-    this.locations.forEach(location => {
-      if (this.state.locationId === location.id) {
-        name = location.name;
-      }
-    });
+    let location = this.getLocation();
+    if (location) {
+      name = location.name;
+    }
     return name;
   }
 
@@ -708,10 +750,144 @@ class Search extends React.Component<Props, State> {
     });
   }
 
+<<<<<<< HEAD
   toggleWeeklyReservation = () => {
     this.setState({weeklyReservation: !this.state.weeklyReservation}, () => {
         console.log("State changed for weekly reservation")
     })
+=======
+  getLocationAttributeRows = () => {
+    let location = this.getLocation();
+    if (!location) {
+      return <></>;
+    }
+    return this.state.attributeValues.map((attributeValue) => {
+      let attribute = this.availableAttributes.find((attr) => attr.id === attributeValue.attributeId);
+      if (!attribute) {
+        return <></>;
+      }
+      return (
+        <Form.Group as={Row} key={attribute.id}>
+          <Form.Label column sm="4">
+            {attribute.label}:
+          </Form.Label>
+          <Col sm="8">
+            <Form.Control plaintext={true} readOnly={true} defaultValue={attribute.type === 2 ? (attributeValue.value === '1' ? this.props.t("yes") : '') : attributeValue.value} />
+          </Col>
+        </Form.Group>
+      );
+    });
+  }
+
+  getSearchFormComparator = (attribute: SpaceAttribute) => {
+    let items = [];
+    items.push(<option value=''></option>);
+    items.push(<option value='eq'>=</option>);
+    items.push(<option value='neq'>&lt;&gt;</option>);
+    if (attribute.type === 1) {
+      items.push(<option value='gt'>&gt;</option>);
+      items.push(<option value='lt'>&lt;</option>);
+    }
+    if (attribute.type === 3) {
+      items.push(<option value='contains'>~</option>);
+    }
+    return items;
+  }
+
+  getSearchFormInput = (attribute: SpaceAttribute) => {
+    if (attribute.type === 1) {
+      return <Form.Control type="number" min={0} value={this.state.searchAttributes.find((attr) => attr.attributeId === attribute.id)?.value || ''} onChange={(e: any) => this.setSearchAttributeValue(attribute.id, e.target.value)} disabled={this.state.searchAttributes.find((attr) => attr.attributeId === attribute.id) === undefined} />;
+    } else if (attribute.type === 2) {
+      return <Form.Check type="checkbox" style={{ paddingTop: '5px' }} label={this.props.t("yes")} checked={this.state.searchAttributes.find((attr) => attr.attributeId === attribute.id)?.value === '1' || false} onChange={(e: any) => this.setSearchAttributeValue(attribute.id, e.target.checked ? '1' : '0')} disabled={this.state.searchAttributes.find((attr) => attr.attributeId === attribute.id) === undefined} />;
+    } else if (attribute.type === 3) {
+      return <Form.Control type="text" value={this.state.searchAttributes.find((attr) => attr.attributeId === attribute.id)?.value || ''} onChange={(e: any) => this.setSearchAttributeValue(attribute.id, e.target.value)} disabled={this.state.searchAttributes.find((attr) => attr.attributeId === attribute.id) === undefined} />;
+    }
+  }
+
+  setSearchAttributeComparator = (attributeId: string, comparator: string) => {
+    let searchAttributes = this.state.searchAttributes;
+    if (comparator === '') {
+      searchAttributes = searchAttributes.filter((attr) => attr.attributeId !== attributeId);
+      this.setState({ searchAttributes: searchAttributes });
+      return;
+    }
+    let searchAttribute = searchAttributes.find((attr) => attr.attributeId === attributeId);
+    if (!searchAttribute) {
+      searchAttribute = new SearchAttribute();
+      searchAttribute.attributeId = attributeId;
+      searchAttributes.push(searchAttribute);
+    }
+    searchAttribute.comparator = comparator;
+    this.setState({ searchAttributes: searchAttributes });
+  }
+
+  setSearchAttributeValue = (attributeId: string, value: string) => {
+    let searchAttributes = this.state.searchAttributes;
+    let searchAttribute = searchAttributes.find((attr) => attr.attributeId === attributeId);
+    if (!searchAttribute) {
+      searchAttribute = new SearchAttribute();
+      searchAttribute.attributeId = attributeId;
+      searchAttributes.push(searchAttribute);
+    }
+    searchAttribute.value = value;
+    this.setState({ searchAttributes: searchAttributes });
+  }
+
+  getSearchFormRows = () => {
+    return this.availableAttributes.map(attribute => {
+      if (!attribute.locationApplicable) {
+        return <></>;
+      }
+      return (
+        <Form.Group as={Row} key={attribute.id}>
+          <Form.Label column sm="4">{attribute.label}</Form.Label>
+          <Col sm="3">
+            <Form.Select value={this.state.searchAttributes.find((attr) => attr.attributeId === attribute.id)?.comparator || ''} onChange={(e: any) => this.setSearchAttributeComparator(attribute.id, e.target.value)}>
+              {this.getSearchFormComparator(attribute)}
+            </Form.Select>
+          </Col>
+          <Col sm="5">
+            {this.getSearchFormInput(attribute)}
+          </Col>
+        </Form.Group>
+      );
+    });
+  }
+
+  resetSearch = () => {
+    this.setState({
+      searchAttributes: []
+    }, () => {
+      this.applySearch();
+    });
+  }
+
+  applySearch = () => {
+    this.setState({
+      showSearchModal: false,
+      loading: true,
+    });
+    SearchAttribute.search(this.state.searchAttributes).then((locations) => {
+      this.locations = locations;
+      if ((locations.length === 0) || (this.locations.find((e) => e.enabled) === undefined)) {
+        this.setState({
+          locationId: "",
+          loading: false,
+        });
+        return;
+      }
+      let newLocationId = this.getPreferredLocationId(this.state.locationId);
+      this.setState({
+        locationId: newLocationId,
+      }, () => {
+        this.loadMap(this.state.locationId).then(() => {
+          this.getLocation()?.getAttributes().then((attributes) => {
+            this.setState({ loading: false });
+          });
+        });
+      });
+    });
+>>>>>>> upstream/main
   }
 
   render() {
@@ -726,13 +902,13 @@ class Search extends React.Component<Props, State> {
         </Form.Group>
       );
     }
-    let enterDatePicker = <DateTimePicker value={this.state.enter} onChange={(value: Date | null) => { if (value != null) this.setEnterDate(value) }} clearIcon={null} required={true} format={this.props.t("datePickerFormat")} />;
+    let enterDatePicker = <DateTimePicker disabled={!this.state.locationId} value={this.state.enter} onChange={(value: Date | null) => { if (value != null) this.setEnterDate(value) }} clearIcon={null} required={true} format={this.props.t("datePickerFormat")} />;
     if (RuntimeConfig.INFOS.dailyBasisBooking) {
-      enterDatePicker = <DatePicker value={this.state.enter} onChange={(value: Date | null | [Date | null, Date | null]) => { if (value != null) this.setEnterDate(value) }} clearIcon={null} required={true} format={this.props.t("datePickerFormatDailyBasisBooking")} />;
+      enterDatePicker = <DatePicker disabled={!this.state.locationId} value={this.state.enter} onChange={(value: Date | null | [Date | null, Date | null]) => { if (value != null) this.setEnterDate(value) }} clearIcon={null} required={true} format={this.props.t("datePickerFormatDailyBasisBooking")} />;
     }
-    let leaveDatePicker = <DateTimePicker value={this.state.leave} onChange={(value: Date | null) => { if (value != null) this.setLeaveDate(value) }} clearIcon={null} required={true} format={this.props.t("datePickerFormat")} />;
+    let leaveDatePicker = <DateTimePicker disabled={!this.state.locationId} value={this.state.leave} onChange={(value: Date | null) => { if (value != null) this.setLeaveDate(value) }} clearIcon={null} required={true} format={this.props.t("datePickerFormat")} />;
     if (RuntimeConfig.INFOS.dailyBasisBooking) {
-      leaveDatePicker = <DatePicker value={this.state.leave} onChange={(value: Date | null | [Date | null, Date | null]) => { if (value != null) this.setLeaveDate(value) }} clearIcon={null} required={true} format={this.props.t("datePickerFormatDailyBasisBooking")} />;
+      leaveDatePicker = <DatePicker disabled={!this.state.locationId} value={this.state.leave} onChange={(value: Date | null | [Date | null, Date | null]) => { if (value != null) this.setLeaveDate(value) }} clearIcon={null} required={true} format={this.props.t("datePickerFormatDailyBasisBooking")} />;
     }
     let untilDatePicker = <DatePicker value={this.state.until} onChange={(value) => { if (value != null) this.setUntilDate(value) }} clearIcon={null} required={true} format={this.props.t("datePickerFormatDailyBasisBooking")} />;
     if (RuntimeConfig.INFOS.dailyBasisBooking) {
@@ -740,7 +916,15 @@ class Search extends React.Component<Props, State> {
     }
 
     let listOrMap = <></>;
-    if (this.state.listView) {
+    if ((this.locations.length === 0) || (!this.state.locationId)) {
+      listOrMap = (
+        <div className="container-signin">
+          <Form className="form-signin">
+            <div style={{paddingBottom: '100px'}} dangerouslySetInnerHTML={{__html: this.props.t("noAreasFounds").replace('.', '.<br />')}}></div>
+          </Form>
+        </div>
+      );
+    } else if (this.state.listView) {
       listOrMap = (
         <div className="container-signin">
           <Form className="form-signin">
@@ -774,10 +958,10 @@ class Search extends React.Component<Props, State> {
     let configContainer = (
       <div className="container-search-config" ref={this.searchContainerRef}>
         <div className="collapse-bar" onClick={() => this.toggleSearchContainer()}>
-          <CollapseIcon color={'#000'} height="20px" width="20px" cssClasses="collapse-icon collapse-icon-bigscreen" />
-          <CollapseIcon2 color={'#000'} height="20px" width="20px" cssClasses="collapse-icon collapse-icon-smallscreen" />
-          <SettingsIcon color={'#555'} height="26px" width="26px" cssClasses="expand-icon expand-icon-bigscreen" />
-          <CollapseIcon color={'#555'} height="20px" width="20px" cssClasses="expand-icon expand-icon-smallscreen" />
+          <CollapseIcon color={'#000'} height="20px" width="20px" className="collapse-icon collapse-icon-bigscreen" />
+          <CollapseIcon2 color={'#000'} height="20px" width="20px" className="collapse-icon collapse-icon-smallscreen" />
+          <SettingsIcon color={'#555'} height="26px" width="26px" className="expand-icon expand-icon-bigscreen" />
+          <CollapseIcon color={'#555'} height="20px" width="20px" className="expand-icon expand-icon-smallscreen" />
         </div>
         <div className="content-minimized">
           <div className='d-flex'>
@@ -798,9 +982,13 @@ class Search extends React.Component<Props, State> {
             <Form.Group className="d-flex">
               <div className='pt-1 me-2'><LocationIcon title={this.props.t("area")} color={'#555'} height="20px" width="20px" /></div>
               <div className='ms-2 w-100'>
-                <Form.Select required={true} value={this.state.locationId} onChange={(e) => this.changeLocation(e.target.value)}>
-                  {this.renderLocations()}
-                </Form.Select>
+                <InputGroup>
+                  <Form.Select required={true} value={this.state.locationId} onChange={(e) => this.changeLocation(e.target.value)} disabled={this.locations.length === 0}>
+                    {this.renderLocations()}
+                  </Form.Select>
+                  <Button variant='outline-secondary' className='addon-button' disabled={(!this.state.locationId) || (this.state.attributeValues.length === 0)} onClick={() => this.setState({ showLocationDetails: true })}><InfoIcon /></Button>
+                  <Button variant={this.state.searchAttributes.length === 0 ? 'outline-secondary' : 'primary'} className='addon-button' onClick={() => this.setState({ showSearchModal: true })}><FilterIcon color={this.state.searchAttributes.length === 0 ? undefined : 'white'} /></Button>
+                </InputGroup>
               </div>
             </Form.Group>
             <Form.Group className="d-flex margin-top-10">
@@ -833,13 +1021,13 @@ class Search extends React.Component<Props, State> {
             <Form.Group className="d-flex margin-top-10">
               <div className='me-2'><WeekIcon title={this.props.t("week")} color={'#555'} height="20px" width="20px" /></div>
               <div className='ms-2 w-100'>
-                <Form.Range disabled={this.state.daySliderDisabled} list="weekDays" min={0} max={RuntimeConfig.INFOS.maxDaysInAdvance} step="1" value={this.state.daySlider} onChange={(event) => this.changeEnterDay(window.parseInt(event.target.value))} />
+                <Form.Range disabled={!this.state.locationId || this.state.daySliderDisabled} list="weekDays" min={0} max={RuntimeConfig.INFOS.maxDaysInAdvance} step="1" value={this.state.daySlider} onChange={(event) => this.changeEnterDay(window.parseInt(event.target.value))} />
               </div>
             </Form.Group>
             <Form.Group className="d-flex margin-top-10">
               <div className='me-2'><MapIcon title={this.props.t("map")} color={'#555'} height="20px" width="20px" /></div>
               <div className='ms-2 w-100'>
-                <Form.Check type="switch" checked={!this.state.listView} onChange={() => this.toggleListView()} label={this.state.listView ? this.props.t("showList") : this.props.t("showMap")} />
+                <Form.Check disabled={!this.state.locationId} type="switch" checked={!this.state.listView} onChange={() => this.toggleListView()} label={this.state.listView ? this.props.t("showList") : this.props.t("showMap")} />
               </div>
             </Form.Group>
           </Form>
@@ -851,9 +1039,34 @@ class Search extends React.Component<Props, State> {
     if (RuntimeConfig.INFOS.dailyBasisBooking) {
       formatter = Formatting.getFormatterNoTime();
     }
+    let locationInfoModal = (
+      <Modal show={this.state.showLocationDetails} onHide={() => this.setState({ showLocationDetails: false })}>
+        <Modal.Header closeButton>
+        </Modal.Header>
+        <Modal.Body>
+          {this.getLocationAttributeRows()}
+        </Modal.Body>
+      </Modal>
+    );
+    let searchModal = (
+      <Modal show={this.state.showSearchModal} onHide={() => this.setState({ showSearchModal: false })}>
+        <Modal.Header closeButton={true}>
+          <Modal.Title>{this.props.t("filter")}</Modal.Title>
+        </Modal.Header>
+        <Form id='filter-locations-form'>
+          <Modal.Body>
+            {this.getSearchFormRows()}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => this.resetSearch()}>{this.props.t("reset")}</Button>
+            <Button type='submit' variant="primary" onClick={(e) => { e.preventDefault(); this.applySearch()}}>{this.props.t("apply")}</Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+    );
     let confirmModal = (
       <Modal show={this.state.showConfirm} onHide={() => this.setState({ showConfirm: false })}>
-        <Modal.Header closeButton>
+        <Modal.Header closeButton={true}>
           <Modal.Title>{this.props.t("bookSeat")}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -949,6 +1162,8 @@ class Search extends React.Component<Props, State> {
     return (
       <>
         <NavBar />
+        {locationInfoModal}
+        {searchModal}
         {confirmModal}
         {bookingNamesModal}
         {successModal}

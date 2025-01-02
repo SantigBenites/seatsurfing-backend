@@ -6,6 +6,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  packages: write
 
 name: release-please
 
@@ -23,3 +24,4 @@ jobs:
     if: ${{ needs.release-please.outputs.release_created }}
     needs: release-please
     uses: ./.github/workflows/release.yml
+    secrets: inherit

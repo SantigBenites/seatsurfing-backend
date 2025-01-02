@@ -8,7 +8,7 @@ import (
 )
 
 func RunDBSchemaUpdates() {
-	targetVersion := 15
+	targetVersion := 17
 	log.Printf("Initializing database with schema version %d...\n", targetVersion)
 	curVersion, err := GetSettingsRepository().GetGlobalInt(SettingDatabaseVersion.Name)
 	if err != nil {
@@ -29,6 +29,8 @@ func RunDBSchemaUpdates() {
 		GetSubscriptionRepository(),
 		GetRefreshTokenRepository(),
 		GetDebugTimeIssuesRepository(),
+		GetSpaceAttributeRepository(),
+		GetSpaceAttributeValueRepository(),
 	}
 	for _, repository := range repositories {
 		repository.RunSchemaUpgrade(curVersion, targetVersion)

@@ -11,6 +11,15 @@ updates:
   directories:
     - "/admin-ui/"
     - "/booking-ui/"
+    - "/commons/ts/"
+    - "/e2e/"
+  schedule:
+    interval: daily
+  commit-message:
+    prefix: "fix(deps)"
+  open-pull-requests-limit: 10
+- package-ecosystem: docker
+  directory: "/"
   schedule:
     interval: daily
   commit-message:

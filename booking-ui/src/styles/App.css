@@ -160,3 +160,6 @@ h2 {
     gap: 10px;
   }
   
+.addon-button {
+    border-color: var(--bs-border-color);
+}
