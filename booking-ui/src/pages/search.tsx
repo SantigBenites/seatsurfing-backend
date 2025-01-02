@@ -9,8 +9,7 @@ import 'react-date-picker/dist/DatePicker.css';
 import 'react-calendar/dist/Calendar.css';
 import 'react-clock/dist/Clock.css';
 import Loading from '../components/Loading';
-import { EnterOutline as EnterIcon, ExitOutline as ExitIcon, LocationOutline as LocationIcon, ChevronUpOutline as CollapseIcon, ChevronDownOutline as CollapseIcon2, SettingsOutline as SettingsIcon, MapOutline as MapIcon, CalendarOutline as WeekIcon, NotificationsOutline as NotificationIcon } from 'react-ionicons'
-import { IoFilter as FilterIcon, IoInformation as InfoIcon, IoEnter as EnterIcon, IoExit as ExitIcon, IoLocation as LocationIcon, IoChevronUp as CollapseIcon, IoChevronDown as CollapseIcon2, IoSettings as SettingsIcon, IoMap as MapIcon, IoCalendar as WeekIcon } from 'react-icons/io5'
+import { IoFilter as FilterIcon, IoInformation as InfoIcon, IoEnter as EnterIcon, IoExit as ExitIcon, IoLocation as LocationIcon, IoChevronUp as CollapseIcon, IoChevronDown as CollapseIcon2, IoSettings as SettingsIcon, IoMap as MapIcon, IoCalendar as WeekIcon, IoNotifications as NotificationIcon } from 'react-icons/io5'
 import ErrorText from '../types/ErrorText';
 import { NextRouter } from 'next/router';
 import { WithTranslation, withTranslation } from 'next-i18next';
@@ -750,12 +749,11 @@ class Search extends React.Component<Props, State> {
     });
   }
 
-<<<<<<< HEAD
   toggleWeeklyReservation = () => {
     this.setState({weeklyReservation: !this.state.weeklyReservation}, () => {
         console.log("State changed for weekly reservation")
     })
-=======
+  }
   getLocationAttributeRows = () => {
     let location = this.getLocation();
     if (!location) {
@@ -887,7 +885,6 @@ class Search extends React.Component<Props, State> {
         });
       });
     });
->>>>>>> upstream/main
   }
 
   render() {
