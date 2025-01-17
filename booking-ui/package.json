@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@types/react-dom": "^19.0.2",
+    "@types/react-dom": "^19.0.3",
     "bootstrap": "^5.3.3",
     "flexspace-commons": "file:../commons/ts",
     "i18next": "^24.2.0",
     "i18next-chained-backend": "^4.6.2",
     "i18next-http-backend": "^3.0.1",
     "i18next-localstorage-backend": "^4.2.0",
-    "next": "^15.1.3",
+    "next": "^15.1.4",
     "next-i18next": "^15.4.1",
     "react": "^19.0.0",
     "react-bootstrap": "^2.10.7",
@@ -44,8 +44,8 @@
   },
   "homepage": "/ui/",
   "devDependencies": {
-    "@types/node": "22.10.3",
-    "eslint": "^9.17.0",
-    "eslint-config-next": "15.1.3"
+    "@types/node": "22.10.7",
+    "eslint": "^9.18.0",
+    "eslint-config-next": "15.1.4"
   }
 }
