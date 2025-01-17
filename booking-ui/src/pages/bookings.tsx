@@ -181,8 +181,8 @@ class Bookings extends React.Component<Props, State> {
             </Button>
             <Button
               variant="danger"
-              onClick={() => this.cancelBooking(this.state.selectedItem)}
-            >
+              onClick={() => this.cancelBooking(this.state.selectedItem)}>
+            </Button>
             <Button variant="secondary" onClick={() => this.setState({ selectedItem: null })} disabled={this.state.deletingItem}>
               {this.props.t("back")}
             </Button>
